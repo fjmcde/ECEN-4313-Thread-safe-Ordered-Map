@@ -3,12 +3,13 @@
 Map::Map()
 {
     root = nullptr;
+    counter = 0;
 }
 
 
 Map::~Map()
 {
-    delete root;
+    postOrderClear(root);
 }
 
 
@@ -24,6 +25,7 @@ void Map::insertNode(Node* newNode)
     {
         newNode->parent = nullptr;
         newNode->color = black;
+        newNode->key = ++counter;
         root = newNode;
 
         return;
@@ -34,7 +36,7 @@ void Map::insertNode(Node* newNode)
     {
         // Insert into the left path
         // NOTE: Should this compare keys or values?
-        if(newNode->value < root->value)
+        if(newNode->key < current->key)
         {
             // Check for left leaf node
             if(current->left == nullptr)
@@ -68,7 +70,14 @@ void Map::insertNode(Node* newNode)
     }
 
     newNode->color = red;
+    newNode->key = ++counter;
     rebalanceTree(newNode);
+}
+
+
+void Map::deleteNode(Node* nodeToDelete)
+{
+    
 }
 
 
@@ -174,6 +183,10 @@ void Map::rightRotate(Node* pivotNode)
     {
         newLeftChild->parent = pivotNode;
     }
+
+    // Adjust keys to maintain consistent indexes
+    pivotNode->key = leftChild->key;
+    leftChild->key = pivotNode->key + 1;
 }
 
 
@@ -213,12 +226,65 @@ void Map::leftRotate(Node* pivotNode)
     {
         newRightChild->parent = pivotNode;
     }
+
+    // Adjust keys to maintain consistent indexes
+    pivotNode->key = rightChild->key;
+    rightChild->key = pivotNode->key + 1;
 }
 
 
-void Map::deleteNode(Node* n)
+Node* Map::findNode(int keyToFind, Node* rootNode)
 {
-    
+    // Check the root node
+    if(rootNode == nullptr || keyToFind == rootNode->key)
+    {
+        return rootNode;
+    }
+
+    // Determine path to check
+    if(keyToFind < rootNode->key)
+    {
+        return findNode(keyToFind, rootNode->left);
+    }
+    else
+    {
+        return findNode(keyToFind, rootNode->right);
+    }
+}
+
+
+int Map::getNumNodes(Node* rootNode)
+{
+    // RB Tree is empty
+    if(rootNode == nullptr)
+    {
+        return 0;
+    }
+
+    // Calculate the number of nodes in each path
+    // NOTE: This would be a prime candidate for concurrency;
+    //       One thread per path using fork/join parallelism.
+    int leftSize = getNumNodes(rootNode->left);
+    int rightSize = getNumNodes(rootNode->right);
+
+    // Return total number of nodes (plus 1 for the root node)
+    return leftSize + rightSize + 1;
+}
+
+
+void Map::postOrderClear(Node* parentNode)
+{
+    if(parentNode != nullptr)
+    {
+        // Recursively delete children before deleting parents
+        // NOTE: This would be a prime candidate for concurrency;
+        //       One thread per path using fork/join parallelism.
+        postOrderClear(parentNode->left);
+        postOrderClear(parentNode->right);
+
+        // All nodes are constructed on the heap, so cleanup is required
+        delete parentNode;
+    }
 }
 
 
@@ -226,21 +292,52 @@ void Map::deleteNode(Node* n)
  *         Public Functions         *
  ************************************/
 
-int Map::get(int key)
+int Map::get(int index)
 {
-
+    Node* n = findNode(index, root);
+    return n->value;
 }
 
 
 void Map::put(int value)
 {
-    Node* newNode = new Node(counter, value);
+    Node* newNode = new Node(++counter, value);
     insertNode(newNode);
-    counter++;
 }
 
 
-void Map::remove(int key)
+void Map::remove(int index)
+{
+    Node* nodeToDelete = findNode(index, root);
+
+    if(nodeToDelete != nullptr)
+    {
+        deleteNode(nodeToDelete);
+        counter--;
+    }
+}
+
+
+Range Map::getRange(int start, int end)
 {
 
+}
+
+
+int Map::size(void)
+{
+    // return getNumNodes(root);
+    return counter;
+}
+
+
+void Map::clear(void)
+{
+    // Use post-order traversal to clear the tree
+    postOrderClear(root);
+
+    // Set the root Node to NULL so the Map can
+    // be reused
+    root = nullptr;
+    counter = 0;
 }
