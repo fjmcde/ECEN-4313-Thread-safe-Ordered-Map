@@ -9,7 +9,32 @@ Map::Map()
 
 Map::~Map()
 {
-    postOrderClear(root);
+    std::stack<Node*> nodeStack;
+    Node* currentNode = root;
+    Node* lastNode = nullptr;
+
+    while((currentNode != nullptr) || !nodeStack.empty())
+    {
+        while(currentNode != nullptr)
+        {
+            nodeStack.push(currentNode);
+            currentNode = currentNode->left;
+        }
+
+        Node* peek = nodeStack.top();
+
+        if((peek->right != nullptr) && (peek->right != lastNode))
+        {
+            currentNode = peek->right;
+        }
+        else
+        {
+            delete peek;
+        }
+    }
+
+    root = nullptr;
+    counter = 0;
 }
 
 
@@ -72,12 +97,218 @@ void Map::insertNode(Node* newNode)
     newNode->color = red;
     newNode->key = ++counter;
     rebalanceTree(newNode);
+
+    int currentKey = 0;
+    adjustKeys(root, currentKey);
 }
 
 
 void Map::deleteNode(Node* nodeToDelete)
 {
-    
+    if(nodeToDelete == nullptr)
+    {
+        return;
+    }
+
+    Node* successor;
+    Node* actualReplacementNode = nullptr;
+    Node* replacementNode = nodeToDelete;
+    RBColor replacementColor = replacementNode->color;
+
+    // Case 1: Node has no children
+    if(isLeaf(nodeToDelete))
+    {
+        successor = nullptr;
+    }
+    // Case 2: Node has at most one child
+    else if(nodeToDelete->left == nullptr)
+    {
+        successor = nodeToDelete->right;
+    }
+    else if(nodeToDelete->right == nullptr)
+    {
+        successor = nodeToDelete->left;
+    }
+    // Case 3: Node has both children
+    else
+    {
+        successor = minimum(nodeToDelete->right);
+        replacementColor = successor->color;
+        actualReplacementNode = successor->right;
+
+        if(successor->parent != nodeToDelete)
+        {
+            transplantNode(successor, successor->right);
+            successor->right = nodeToDelete->right;
+            successor->right->parent = successor;
+        }
+
+        // Transplant successor node
+        transplantNode(nodeToDelete, successor);
+        successor->left = nodeToDelete->left;
+        successor->left->parent = successor;
+        successor->color = nodeToDelete->color;
+    }
+
+    transplantNode(nodeToDelete, successor);
+
+    if(successor != nullptr)
+    {
+        delete nodeToDelete;
+        counter--;
+    }
+
+    if(replacementColor == black)
+    {
+        deleteFix(actualReplacementNode);
+    }
+
+    int currentKey = 0;
+    adjustKeys(root, currentKey);
+}
+
+
+void Map::deleteFix(Node* node)
+{
+    while((node != root) && (node->color == black))
+    {
+        Node* siblingNode;
+
+        // Node is a left child
+        if(node == node->parent->left)
+        {
+            siblingNode = node->parent->right;
+
+            // Case 1: sibling is red
+            if(siblingNode->color == red)
+            {
+                siblingNode->color = black;
+                node->parent->color = red;
+                leftRotate(node->parent);
+                siblingNode = node->parent->right;
+            }
+
+            // Case 2: sibling's children are black
+            if((siblingNode->left->color == black) && (siblingNode->right->color == black))
+            {
+                siblingNode->color = red;
+                node = node->parent;
+            }
+            else
+            {
+                // Case 3: Left child is red; right child is black
+                if(siblingNode->right->color == black)
+                {
+                    siblingNode->left->color = black;
+                    siblingNode->color = red;
+                    rightRotate(siblingNode);
+                    siblingNode = node->parent->right;
+                }
+
+                // Case 4: Right child is red
+                siblingNode->color = node->parent->color;
+                node->parent->color = black;
+                siblingNode->right->color = black;
+                leftRotate(node->parent);
+                node = root;
+            }
+        }
+        // Node is a right child
+        else
+        {
+            siblingNode = node->parent->left;
+            
+            // Case 1: sibling is red
+            if(siblingNode->color == red)
+            {
+                siblingNode->color = black;
+                node->parent->color = red;
+                rightRotate(node->parent);
+                siblingNode = node->parent->left;
+            }
+
+            // Case 2: sibling's children are black
+            if((siblingNode->right->color == black) && (siblingNode->left->color == black))
+            {
+                siblingNode->color = red;
+                node = node->parent;
+            }
+            else
+            {
+                // Case 3: right child is red; left child is black
+                if(siblingNode->left->color == black)
+                {
+                    siblingNode->right->color = black;
+                    siblingNode->color = red;
+                    leftRotate(siblingNode);
+                    siblingNode = node->parent->left;
+                }
+
+                // Case 4: left child is red
+                siblingNode->color = node->parent->color;
+                node->parent->color = black;
+                siblingNode->left->color = black;
+                rightRotate(node->parent);
+                node = root;
+            }
+        }
+    }
+
+    if(node != nullptr)
+    {
+        node->parent = nullptr;
+        node->color = black;
+    }
+}
+
+
+void Map::transplantNode(Node* nodeToReplace, Node* transplantNode)
+{
+    // Transplant node to root
+    if(nodeToReplace->parent == nullptr)
+    {
+        root = transplantNode;
+    }
+    // Transplant node to left child
+    else if(nodeToReplace == nodeToReplace->parent->left)
+    {
+        nodeToReplace->parent->left = transplantNode;
+    }
+    // Transplant node to right child
+    else
+    {
+        nodeToReplace->parent->right = transplantNode;
+    }
+
+    // Update parent
+    if(transplantNode != nullptr)
+    {
+        transplantNode->parent = nodeToReplace->parent;
+    }
+}
+
+
+bool Map::isLeaf(const Node* node)
+{
+    // A node is a leaf is if has no child nodes
+    if(node->left == nullptr && node->right == nullptr)
+    {
+        return true;
+    }
+
+    return false;
+}
+
+
+Node* Map::minimum(Node* node)
+{
+    // Find the minimum node in subtree
+    while(node->left != nullptr)
+    {
+        node = node->left;
+    }
+
+    return node;
 }
 
 
@@ -144,6 +375,19 @@ void Map::rebalanceTree(Node* newNode)
 
     // Root is always black
     root->color = black;
+    int currentKey = 0;
+    adjustKeys(root, currentKey);
+}
+
+
+void Map::adjustKeys(Node* rootNode, int& currentKey)
+{
+    if(rootNode != nullptr)
+    {
+        adjustKeys(rootNode->left, currentKey);
+        rootNode->key = currentKey++;
+        adjustKeys(rootNode->right, currentKey);
+    }
 }
 
 
@@ -253,7 +497,7 @@ Node* Map::findNode(int keyToFind, Node* rootNode)
 }
 
 
-int Map::getNumNodes(Node* rootNode)
+int Map::getNumNodes(const Node* rootNode)
 {
     // RB Tree is empty
     if(rootNode == nullptr)
@@ -272,19 +516,9 @@ int Map::getNumNodes(Node* rootNode)
 }
 
 
-void Map::postOrderClear(Node* parentNode)
+int& Map::operator[](const int index)
 {
-    if(parentNode != nullptr)
-    {
-        // Recursively delete children before deleting parents
-        // NOTE: This would be a prime candidate for concurrency;
-        //       One thread per path using fork/join parallelism.
-        postOrderClear(parentNode->left);
-        postOrderClear(parentNode->right);
-
-        // All nodes are constructed on the heap, so cleanup is required
-        delete parentNode;
-    }
+    return at(index);
 }
 
 
@@ -292,16 +526,26 @@ void Map::postOrderClear(Node* parentNode)
  *         Public Functions         *
  ************************************/
 
-int Map::get(int index)
+int& Map::at(const int index)
 {
     Node* n = findNode(index, root);
-    return n->value;
+
+    if(n != nullptr)
+    {
+        return n->value;
+    }
+    else
+    {
+        throw std::out_of_range("Map::get(): Value not found");
+    }
+    
 }
 
 
 void Map::put(int value)
 {
     Node* newNode = new Node(++counter, value);
+    DEBUG_PRINT("newNode value:", newNode->value);
     insertNode(newNode);
 }
 
@@ -318,10 +562,10 @@ void Map::remove(int index)
 }
 
 
-Range Map::getRange(int start, int end)
-{
+// Range Map::getRange(int start, int end)
+// {
 
-}
+// }
 
 
 int Map::size(void)
@@ -333,11 +577,33 @@ int Map::size(void)
 
 void Map::clear(void)
 {
-    // Use post-order traversal to clear the tree
-    postOrderClear(root);
+    std::stack<Node*> nodeStack;
+    Node* currentNode = root;
 
-    // Set the root Node to NULL so the Map can
-    // be reused
+    while((currentNode != nullptr) || (!nodeStack.empty()))
+    {
+        // Traverse the left tree
+        while(currentNode != nullptr)
+        {
+            nodeStack.push(currentNode);
+            currentNode = currentNode->left;
+        }
+
+        // Pop the top of the stack
+        currentNode = nodeStack.top();
+        nodeStack.pop();
+
+        // Store the right subtree so traversal can continue
+        Node* rightSubTree = currentNode->right;
+
+        // Delete current Node
+        delete currentNode;
+
+        // Prepare to traverse the right subtree
+        currentNode = rightSubTree;
+    }
+
+    // Reset the root and counter so that the Map can be reused
     root = nullptr;
     counter = 0;
 }
