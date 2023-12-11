@@ -15,7 +15,7 @@ int main(void)
     // map.put(0);
 
     std::cout << "[";
-    for(int i = 0; i < 10; i++)
+    for(int i = 0; i < 1; i++)
     {
         std::cout << map[i] << ", ";
     }

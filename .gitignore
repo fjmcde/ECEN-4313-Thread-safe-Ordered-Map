@@ -31,3 +31,9 @@
 *.out
 *.app
 
+# Ignore directories
+obj
+.vscode
+
+# Ignore files
+myMap
