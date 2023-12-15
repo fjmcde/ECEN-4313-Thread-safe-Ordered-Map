@@ -62,6 +62,9 @@ Node* Map::insertNode(Node* rootNode, Node* newNode)
             current->nodeLock.unlock();
             return rootNode;
         }
+
+        // Unlock for hand-over-hand locking
+        current->nodeLock.unlock();
     }
 
     if(newNode->value < parent->value)
