@@ -9,32 +9,18 @@ Map::Map()
 
 Map::~Map()
 {
-    std::stack<Node*> nodeStack;
-    Node* currentNode = root;
-    Node* lastNode = nullptr;
-
-    while((currentNode != nullptr) || !nodeStack.empty())
-    {
-        while(currentNode != nullptr)
-        {
-            nodeStack.push(currentNode);
-            currentNode = currentNode->left;
-        }
-
-        Node* peek = nodeStack.top();
-
-        if((peek->right != nullptr) && (peek->right != lastNode))
-        {
-            currentNode = peek->right;
-        }
-        else
-        {
-            delete peek;
-        }
-    }
-
+    destroyTree(root);
     root = nullptr;
-    counter = 0;
+}
+
+void Map::destroyTree(Node* node)
+{
+    if(node != nullptr)
+    {
+        destroyTree(node->left);
+        destroyTree(node->right);
+        delete node;
+    }
 }
 
 
@@ -42,64 +28,28 @@ Map::~Map()
  *        Private Functions         *
  ************************************/
 
-void Map::insertNode(Node* newNode)
+Node* Map::insertNode(Node* rootNode, Node* newNode)
 {
-    // Insert newNode at the root of the tree if
-    // the tree is empty
-    if(root == nullptr)
+    // Case 1: Subtree is empty
+    if(rootNode == nullptr)
     {
-        newNode->parent = nullptr;
-        newNode->color = black;
-        newNode->key = ++counter;
-        root = newNode;
-
-        return;
-    }
-    
-    Node* current = root;
-    while(current != nullptr)
-    {
-        // Insert into the left path
-        // NOTE: Should this compare keys or values?
-        if(newNode->key < current->key)
-        {
-            // Check for left leaf node
-            if(current->left == nullptr)
-            {
-                newNode->parent = current;
-                current->left = newNode;
-                break;
-            }
-            // Continue traversing
-            else
-            {
-                current = current->left;
-            }
-        }
-        // Insert into the right path
-        else
-        {
-            // Check for right leaf node
-            if(current->right == nullptr)
-            {
-                newNode->parent = current;
-                current->right = newNode;
-                break;
-            }
-            // Continue traversing
-            else
-            {
-                current = current->right;
-            }
-        }
+        return newNode;
     }
 
-    newNode->color = red;
-    newNode->key = ++counter;
-    rebalanceTree(newNode);
+    // Case 2: Recur down the left subtree
+    if(newNode->value < rootNode->value)
+    {
+        rootNode->left = insertNode(rootNode->left, newNode);
+        rootNode->left->parent = rootNode;
+    }
+    // Case 3: Recure down the right subtree
+    else if(newNode->value > rootNode->value)
+    {
+        rootNode->right = insertNode(rootNode->right, newNode);
+        rootNode->right->parent = rootNode;
+    }
 
-    int currentKey = 0;
-    adjustKeys(root, currentKey);
+    return rootNode;
 }
 
 
@@ -160,7 +110,7 @@ void Map::deleteNode(Node* nodeToDelete)
 
     if(replacementColor == black)
     {
-        deleteFix(actualReplacementNode);
+        deleteFix(successor, actualReplacementNode);
     }
 
     int currentKey = 0;
@@ -168,7 +118,7 @@ void Map::deleteNode(Node* nodeToDelete)
 }
 
 
-void Map::deleteFix(Node* node)
+void Map::deleteFix(Node* &rootNode, Node* &node)
 {
     while((node != root) && (node->color == black))
     {
@@ -184,7 +134,7 @@ void Map::deleteFix(Node* node)
             {
                 siblingNode->color = black;
                 node->parent->color = red;
-                leftRotate(node->parent);
+                leftRotate(rootNode, node->parent);
                 siblingNode = node->parent->right;
             }
 
@@ -201,7 +151,7 @@ void Map::deleteFix(Node* node)
                 {
                     siblingNode->left->color = black;
                     siblingNode->color = red;
-                    rightRotate(siblingNode);
+                    rightRotate(rootNode, siblingNode);
                     siblingNode = node->parent->right;
                 }
 
@@ -209,7 +159,7 @@ void Map::deleteFix(Node* node)
                 siblingNode->color = node->parent->color;
                 node->parent->color = black;
                 siblingNode->right->color = black;
-                leftRotate(node->parent);
+                leftRotate(rootNode, node->parent);
                 node = root;
             }
         }
@@ -223,7 +173,7 @@ void Map::deleteFix(Node* node)
             {
                 siblingNode->color = black;
                 node->parent->color = red;
-                rightRotate(node->parent);
+                rightRotate(rootNode, node->parent);
                 siblingNode = node->parent->left;
             }
 
@@ -240,7 +190,7 @@ void Map::deleteFix(Node* node)
                 {
                     siblingNode->right->color = black;
                     siblingNode->color = red;
-                    leftRotate(siblingNode);
+                    leftRotate(rootNode, siblingNode);
                     siblingNode = node->parent->left;
                 }
 
@@ -248,7 +198,7 @@ void Map::deleteFix(Node* node)
                 siblingNode->color = node->parent->color;
                 node->parent->color = black;
                 siblingNode->left->color = black;
-                rightRotate(node->parent);
+                rightRotate(rootNode, node->parent);
                 node = root;
             }
         }
@@ -312,71 +262,77 @@ Node* Map::minimum(Node* node)
 }
 
 
-void Map::rebalanceTree(Node* newNode)
+void Map::rebalanceTree(Node* &rootNode, Node* &newNode)
 {
-    while(newNode->parent->color == red)
+    Node *parentNode = nullptr;
+    Node *grandparentNode = nullptr;
+ 
+    while((newNode != rootNode) && (newNode->color != black) && (newNode->parent->color == red))
     {
-        // Case 1: Node's parent is the left child of its grandparent
-        if(newNode->parent == newNode->parent->parent->left)
+        parentNode = newNode->parent;
+        grandparentNode = newNode->parent->parent;
+ 
+        // Path A: Parent of newNode is left child of grandparent of newNode
+        if(parentNode == grandparentNode->left)
         {
-            Node* uncle = newNode->parent->parent->right;
+            Node *uncleNode = grandparentNode->right;
 
-            // Case 3: Parent and uncle are both red
-            if(uncle->color == red)
+            //Case 1: The uncle of newNode is also red
+            if(uncleNode != nullptr && uncleNode->color == red)
             {
-                newNode->parent->color = black;
-                uncle->color = black;
-                newNode->parent->parent->color = red;
-                newNode = newNode->parent->parent;
+                grandparentNode->color = red;
+                parentNode->color = black;
+                uncleNode->color = black;
+                newNode = grandparentNode;
             }
             else
             {
-                // Case 4: Node is the right child of the left child of the grandparent
-                if(newNode == newNode->parent->right)
+                // Case 2: newNode is right child of its parent
+                if(newNode == parentNode->right)
                 {
-                    newNode = newNode->parent;
-                    leftRotate(newNode);
+                    leftRotate(rootNode, parentNode);
+                    newNode = parentNode;
+                    parentNode = newNode->parent;
                 }
-
-                // Case 5: Node is the left child of the left child of the grandparent
-                newNode->parent->color = black;
-                newNode->parent->parent->color = red;
-                rightRotate(newNode->parent->parent);
+ 
+                //Case 3: newNode is left child of its parent
+                rightRotate(rootNode, grandparentNode);
+                std::swap(parentNode->color, grandparentNode->color);
+                newNode = parentNode;
             }
         }
-        // Symmetric cases for a right-leaning tree
+        //Path B: Parent of newNode is right child of grandparent of newNode
         else
         {
-            Node* uncle = newNode->parent->parent->left;
-
-            // Case 3 (Symmetric): Parent and uncle are both red
-            if(uncle->color == red)
+            Node *uncleNode = grandparentNode->left;
+ 
+            //Case 1: The uncle of newNode is also red
+            if((uncleNode != nullptr) && (uncleNode->color == red))
             {
-                newNode->parent->color = black;
-                uncle->color = black;
-                newNode->parent->parent->color = red;
-                newNode = newNode->parent->parent;
+                grandparentNode->color = red;
+                parentNode->color = black;
+                uncleNode->color = black;
+                newNode = grandparentNode;
             }
             else
             {
-                // Case 5 (Symmetric): Node is the left child of the left child of the grandparent
-                if(newNode == newNode->parent->left)
+                // Case 2: newNode is left child of its parent
+                if (newNode == parentNode->left)
                 {
-                    newNode = newNode->parent;
-                    rightRotate(newNode);
+                    rightRotate(rootNode, parentNode);
+                    newNode = parentNode;
+                    parentNode = newNode->parent;
                 }
-
-                newNode->parent->color = black;
-                newNode->parent->parent->color = red;
-                leftRotate(newNode->parent->parent);
+ 
+                //Case 3: newNode is right child of its parent
+                leftRotate(rootNode, grandparentNode);
+                std::swap(parentNode->color, grandparentNode->color);
+                newNode = parentNode;
             }
         }
     }
-
-    // Root is always black
-    root->color = black;
-    int currentKey = 0;
-    adjustKeys(root, currentKey);
+ 
+    rootNode->color = black;
 }
 
 
@@ -385,76 +341,55 @@ void Map::adjustKeys(Node* rootNode, int& currentKey)
     if(rootNode != nullptr)
     {
         adjustKeys(rootNode->left, currentKey);
-        rootNode->key = currentKey++;
+        // rootNode->key = currentKey++;
         adjustKeys(rootNode->right, currentKey);
     }
 }
 
 
-void Map::rightRotate(Node* pivotNode)
+void Map::rightRotate(Node* &rootNode, Node* &pivotNode)
 {
-    // Check if rotation is not needed
-    if (pivotNode == nullptr || pivotNode->left == nullptr)
-    {
-        return;
-    }
-
     Node* leftChild = pivotNode->left;
-
-    // Update leftChild's right subtree
-    Node* newLeftChild = leftChild->right;
+ 
+    pivotNode->left = leftChild->right;
+ 
+    if (pivotNode->left != nullptr)
+        pivotNode->left->parent = pivotNode;
+ 
+    leftChild->parent = pivotNode->parent;
+ 
+    if (pivotNode->parent == nullptr)
+        rootNode = leftChild;
+ 
+    else if (pivotNode == pivotNode->parent->left)
+        pivotNode->parent->left = leftChild;
+ 
+    else
+        pivotNode->parent->right = leftChild;
+ 
     leftChild->right = pivotNode;
     pivotNode->parent = leftChild;
-
-    // Update parent pointers
-    leftChild->parent = pivotNode->parent;
-    if(pivotNode->parent == nullptr)
-    {
-        root = leftChild;
-    }
-    else if(pivotNode == pivotNode->parent->left)
-    {
-        pivotNode->parent->left = leftChild;
-    }
-    else
-    {
-        pivotNode->parent->right = leftChild;
-    }
-
-    // Attach the original right subtree of leftChild
-    pivotNode->left = newLeftChild;
-    if(newLeftChild != nullptr)
-    {
-        newLeftChild->parent = pivotNode;
-    }
-
-    // Adjust keys to maintain consistent indexes
-    pivotNode->key = leftChild->key;
-    leftChild->key = pivotNode->key + 1;
 }
 
 
-void Map::leftRotate(Node* pivotNode)
+void Map::leftRotate(Node* &rootNode, Node* &pivotNode)
 {
-    // Check if rotation is not needed
-    if (pivotNode == nullptr || pivotNode->right == nullptr)
-    {
-        return;
-    }
-
     Node* rightChild = pivotNode->right;
-
-    // Update rightChild's left subtree
-    Node* newRightChild = rightChild->left;
-    rightChild->left = pivotNode;
-    pivotNode->parent = rightChild;
-
-    // Update parent pointers
-    rightChild->parent = pivotNode->parent;
-    if(pivotNode->parent == nullptr)
+ 
+    pivotNode->right = rightChild->left;
+ 
+    if (pivotNode->right != nullptr)
     {
-        root = rightChild;
+        pivotNode->right->parent = pivotNode;
     }
+ 
+    rightChild->parent = pivotNode->parent;
+ 
+    if (pivotNode->parent == nullptr)
+    {
+        rootNode = rightChild;
+    }
+ 
     else if(pivotNode == pivotNode->parent->left)
     {
         pivotNode->parent->left = rightChild;
@@ -464,16 +399,8 @@ void Map::leftRotate(Node* pivotNode)
         pivotNode->parent->right = rightChild;
     }
 
-    // Attach the original left subtree of rightChild
-    pivotNode->right = newRightChild;
-    if(newRightChild != nullptr)
-    {
-        newRightChild->parent = pivotNode;
-    }
-
-    // Adjust keys to maintain consistent indexes
-    pivotNode->key = rightChild->key;
-    rightChild->key = pivotNode->key + 1;
+    rightChild->left = pivotNode;
+    pivotNode->parent = rightChild;
 }
 
 
@@ -545,8 +472,7 @@ int& Map::at(const int index)
 void Map::put(int value)
 {
     Node* newNode = new Node(++counter, value);
-    DEBUG_PRINT("newNode value:", newNode->value);
-    insertNode(newNode);
+    root = insertNode(root, newNode);
 }
 
 
@@ -570,40 +496,13 @@ void Map::remove(int index)
 
 int Map::size(void)
 {
-    // return getNumNodes(root);
-    return counter;
+    return getNumNodes(root);
+    // return counter;
 }
 
 
 void Map::clear(void)
 {
-    std::stack<Node*> nodeStack;
-    Node* currentNode = root;
-
-    while((currentNode != nullptr) || (!nodeStack.empty()))
-    {
-        // Traverse the left tree
-        while(currentNode != nullptr)
-        {
-            nodeStack.push(currentNode);
-            currentNode = currentNode->left;
-        }
-
-        // Pop the top of the stack
-        currentNode = nodeStack.top();
-        nodeStack.pop();
-
-        // Store the right subtree so traversal can continue
-        Node* rightSubTree = currentNode->right;
-
-        // Delete current Node
-        delete currentNode;
-
-        // Prepare to traverse the right subtree
-        currentNode = rightSubTree;
-    }
-
-    // Reset the root and counter so that the Map can be reused
+    destroyTree(root);
     root = nullptr;
-    counter = 0;
 }

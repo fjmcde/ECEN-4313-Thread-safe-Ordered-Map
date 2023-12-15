@@ -1,6 +1,16 @@
 #ifndef NODE_H
 #define NODE_H
 
+#ifdef DEBUG
+    #define DEBUG_NODE(node)                                                                                                                                                    \
+    {                                                                                                                                                                           \
+        printf("\nAddr: %p, parent: %p, left: %p, right: %p, key: %d, value: %d, color: %d\n", node, node->parent, node->left, node->right, node->key, node->value, node->color); \
+    }
+#else
+    #define DEBUG_NODE(...) do{}while(0)
+#endif
+
+
 enum RBColor : int { red, black };
 
 struct Node
@@ -26,13 +36,6 @@ struct Node
 
         // Default color is black
         color = black;
-    }
-
-    ~Node()
-    {
-        // Parent nodes manage their children's memory
-        delete left;
-        delete right;
     }
 };
 
