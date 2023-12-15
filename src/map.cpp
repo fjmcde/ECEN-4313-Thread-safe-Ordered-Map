@@ -31,24 +31,50 @@ void Map::destroyTree(Node* node)
 
 Node* Map::insertNode(Node* rootNode, Node* newNode)
 {
-    // Case 1: Subtree is empty
     if(rootNode == nullptr)
     {
         return newNode;
     }
 
-    // Case 2: Recur down the left subtree
-    if(newNode->value < rootNode->value)
+    Node* current = rootNode;
+    Node* parent = nullptr;
+
+    while(current != nullptr)
     {
-        rootNode->left = insertNode(rootNode->left, newNode);
-        rootNode->left->parent = rootNode;
+        // Lock the current node
+        current->nodeLock.lock();
+
+        parent = current;
+
+        if(newNode->value < current->value)
+        {
+            current = current->left;
+        }
+        else if(newNode->value > current->value)
+        {
+            current = current->right;
+        }
+        else
+        {
+            // Duplicate values aren't handled yet
+
+            // unlock before returning to prevent deadlock
+            current->nodeLock.unlock();
+            return rootNode;
+        }
     }
-    // Case 3: Recure down the right subtree
-    else if(newNode->value > rootNode->value)
+
+    if(newNode->value < parent->value)
     {
-        rootNode->right = insertNode(rootNode->right, newNode);
-        rootNode->right->parent = rootNode;
+        parent->left = newNode;
     }
+    else
+    {
+        parent->right = newNode;
+    }
+
+    // Unlock node
+    // newNode->nodeLock.unlock();
 
     return rootNode;
 }

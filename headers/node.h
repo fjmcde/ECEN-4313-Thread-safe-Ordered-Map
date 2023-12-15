@@ -1,6 +1,8 @@
 #ifndef NODE_H
 #define NODE_H
 
+#include <mutex>
+
 #ifdef DEBUG
     #define DEBUG_NODE(node)                                                                                                                                                    \
     {                                                                                                                                                                           \
@@ -15,6 +17,10 @@ enum RBColor : int { red, black };
 
 struct Node
 {
+    // nodeLock provides more fine-grain locking over 
+    // using a single-global lock for the whole tree
+    std::mutex nodeLock;
+
     int key;
     int value;
 
