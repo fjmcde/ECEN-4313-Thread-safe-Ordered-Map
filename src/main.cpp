@@ -8,9 +8,12 @@ int main(void)
     map.put(6);
     map.put(4);
     map.put(8);
+    map.remove(8);
     map.put(1);
     map.put(3);
     map.put(7);
+    map.remove(5);
+    map.remove(2);
     map.put(9);
     map.put(0);
 

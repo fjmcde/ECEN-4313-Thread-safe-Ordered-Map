@@ -13,6 +13,7 @@ Map::~Map()
     root = nullptr;
 }
 
+
 void Map::destroyTree(Node* node)
 {
     if(node != nullptr)
@@ -60,7 +61,7 @@ void Map::deleteNode(Node* nodeToDelete)
         return;
     }
 
-    Node* successor;
+    Node* successor = nullptr;
     Node* actualReplacementNode = nullptr;
     Node* replacementNode = nodeToDelete;
     RBColor replacementColor = replacementNode->color;
@@ -102,9 +103,9 @@ void Map::deleteNode(Node* nodeToDelete)
 
     transplantNode(nodeToDelete, successor);
 
+
     if(successor != nullptr)
     {
-        delete nodeToDelete;
         counter--;
     }
 
@@ -113,16 +114,18 @@ void Map::deleteNode(Node* nodeToDelete)
         deleteFix(successor, actualReplacementNode);
     }
 
+    delete nodeToDelete;
+
     int currentKey = 0;
     adjustKeys(root, currentKey);
 }
 
 
-void Map::deleteFix(Node* &rootNode, Node* &node)
+void Map::deleteFix(Node*& rootNode, Node*& node)
 {
-    while((node != root) && (node->color == black))
+    while((node != nullptr) && (node != root) && (node->color == black))
     {
-        Node* siblingNode;
+        Node* siblingNode = nullptr;
 
         // Node is a left child
         if(node == node->parent->left)
@@ -204,7 +207,7 @@ void Map::deleteFix(Node* &rootNode, Node* &node)
         }
     }
 
-    if(node != nullptr)
+    if((rootNode != nullptr) && (node != nullptr))
     {
         node->parent = nullptr;
         node->color = black;
@@ -262,7 +265,7 @@ Node* Map::minimum(Node* node)
 }
 
 
-void Map::rebalanceTree(Node* &rootNode, Node* &newNode)
+void Map::rebalanceTree(Node*& rootNode, Node*& newNode)
 {
     Node *parentNode = nullptr;
     Node *grandparentNode = nullptr;
@@ -317,7 +320,7 @@ void Map::rebalanceTree(Node* &rootNode, Node* &newNode)
             else
             {
                 // Case 2: newNode is left child of its parent
-                if (newNode == parentNode->left)
+                if(newNode == parentNode->left)
                 {
                     rightRotate(rootNode, parentNode);
                     newNode = parentNode;
@@ -333,6 +336,10 @@ void Map::rebalanceTree(Node* &rootNode, Node* &newNode)
     }
  
     rootNode->color = black;
+    
+    // Update the keys after rebalancing
+    int currentKey = 0;
+    adjustKeys(rootNode, currentKey);
 }
 
 
@@ -341,27 +348,27 @@ void Map::adjustKeys(Node* rootNode, int& currentKey)
     if(rootNode != nullptr)
     {
         adjustKeys(rootNode->left, currentKey);
-        // rootNode->key = currentKey++;
-        adjustKeys(rootNode->right, currentKey);
+        rootNode->key = currentKey++;
+        adjustKeys(rootNode->right, currentKey); 
     }
 }
 
 
-void Map::rightRotate(Node* &rootNode, Node* &pivotNode)
+void Map::rightRotate(Node*& rootNode, Node*& pivotNode)
 {
     Node* leftChild = pivotNode->left;
  
     pivotNode->left = leftChild->right;
  
-    if (pivotNode->left != nullptr)
+    if(pivotNode->left != nullptr)
         pivotNode->left->parent = pivotNode;
  
     leftChild->parent = pivotNode->parent;
  
-    if (pivotNode->parent == nullptr)
+    if(pivotNode->parent == nullptr)
         rootNode = leftChild;
  
-    else if (pivotNode == pivotNode->parent->left)
+    else if(pivotNode == pivotNode->parent->left)
         pivotNode->parent->left = leftChild;
  
     else
@@ -369,23 +376,27 @@ void Map::rightRotate(Node* &rootNode, Node* &pivotNode)
  
     leftChild->right = pivotNode;
     pivotNode->parent = leftChild;
+
+    // Update the keys after rebalancing
+    int currentKey = 0;
+    adjustKeys(rootNode, currentKey);
 }
 
 
-void Map::leftRotate(Node* &rootNode, Node* &pivotNode)
+void Map::leftRotate(Node*& rootNode, Node*& pivotNode)
 {
     Node* rightChild = pivotNode->right;
  
     pivotNode->right = rightChild->left;
  
-    if (pivotNode->right != nullptr)
+    if(pivotNode->right != nullptr)
     {
         pivotNode->right->parent = pivotNode;
     }
  
     rightChild->parent = pivotNode->parent;
  
-    if (pivotNode->parent == nullptr)
+    if(pivotNode->parent == nullptr)
     {
         rootNode = rightChild;
     }
@@ -401,6 +412,10 @@ void Map::leftRotate(Node* &rootNode, Node* &pivotNode)
 
     rightChild->left = pivotNode;
     pivotNode->parent = rightChild;
+
+    // Update the keys after rebalancing
+    int currentKey = 0;
+    adjustKeys(rootNode, currentKey);
 }
 
 
@@ -422,6 +437,25 @@ Node* Map::findNode(int keyToFind, Node* rootNode)
         return findNode(keyToFind, rootNode->right);
     }
 }
+
+
+Node* Map::findValue(int valueToFind, Node* rootNode)
+{
+    if(rootNode == nullptr || valueToFind == rootNode->value)
+    {
+        return rootNode;
+    }
+
+    if(valueToFind < rootNode->value)
+    {
+        return findValue(valueToFind, rootNode->left);
+    }
+    else
+    {
+        return findValue(valueToFind, rootNode->right);
+    }
+}
+
 
 
 int Map::getNumNodes(const Node* rootNode)
@@ -473,12 +507,15 @@ void Map::put(int value)
 {
     Node* newNode = new Node(++counter, value);
     root = insertNode(root, newNode);
+
+    int currentKey = 0;
+    adjustKeys(root, currentKey);
 }
 
 
-void Map::remove(int index)
+void Map::remove(int value)
 {
-    Node* nodeToDelete = findNode(index, root);
+    Node* nodeToDelete = findValue(value, root);
 
     if(nodeToDelete != nullptr)
     {
