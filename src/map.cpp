@@ -559,11 +559,31 @@ void Map::remove(int value)
 }
 
 
-// Range Map::getRange(int start, int end)
-// {
+Range Map::getRange(int start, int end)
+{
+    Range result;
+    getRangeHelper(root, start, end, result);
+    return result;
+}
 
-// }
 
+void Map::getRangeHelper(Node* rootNode, int start, int end, Range& result)
+{
+    if (rootNode == nullptr) {
+        return;
+    }
+
+    // In-order traversal
+    getRangeHelper(rootNode->left, start, end, result);
+
+    // Check if the current node's key is within the specified range
+    if((rootNode->value >= start) && (rootNode->value <= end))
+    {
+        result.push_back(std::make_pair(rootNode->key, rootNode->value));
+    }
+
+    getRangeHelper(rootNode->right, start, end, result);
+}
 
 int Map::size(void)
 {

@@ -36,7 +36,7 @@ class Map
         Node* findNode(int keyToFind, Node* rootNode);
         Node* findValue(int valueToFind, Node* rootNode);
         int getNumNodes(const Node* rootNode);
-        void postOrderClear(Node* rootNode);
+        void getRangeHelper(Node* rootNode, int start, int end, Range& result);
         void destroyTree(Node* node);
 
     public:
@@ -47,7 +47,7 @@ class Map
         void put(int value);
         void remove(int value);
         int& at(const int index);
-        // Range getRange(int start, int end);
+        Range getRange(int start, int end);
         int size(void);
         void clear(void);
 

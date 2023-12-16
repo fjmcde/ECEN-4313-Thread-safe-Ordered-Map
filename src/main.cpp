@@ -22,17 +22,27 @@ int main(void)
     map.remove(4);
     map.put(0);
     map.put(20);
-    
-    // map.clear();
+
+    Range pairs = map.getRange(2, 9);
 
     std::cout << "\n\nmap.size(): " << map.size() << std::endl;
 
-    std::cout << "[";
+    std::cout << "Ordered: [";
     for(int i = 0; i < map.size(); i++)
     {
         std::cout << " " << map[i] << " ";
     }
     std::cout << "]\n";
+
+    std::cout << "Pairs {k / v}: [";
+    for(size_t i = 0; i < pairs.size(); i++)
+    {
+        std::cout << " {" << pairs[i].first << " / " << pairs[i].second << "} ";
+    }
+    std::cout << "]\n";
+
+    map.clear();
+    std::cout << "\nClearing Map:\nmap.size(): " << map.size() << std::endl;
 
     return 0;
 }
