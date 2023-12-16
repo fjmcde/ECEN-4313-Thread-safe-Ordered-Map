@@ -11,6 +11,7 @@ Map::~Map()
 {
     destroyTree(root);
     root = nullptr;
+    counter = 0;
 }
 
 
@@ -42,7 +43,7 @@ Node* Map::insertNode(Node* rootNode, Node* newNode)
     while(current != nullptr)
     {
         // Lock the current node
-        current->nodeLock.lock();
+        // current->nodeLock.lock();
 
         parent = current;
 
@@ -59,15 +60,19 @@ Node* Map::insertNode(Node* rootNode, Node* newNode)
             // Duplicate values aren't handled yet
 
             // unlock before returning to prevent deadlock
-            current->nodeLock.unlock();
+            // current->nodeLock.unlock();
             return rootNode;
         }
 
         // Unlock for hand-over-hand locking
-        current->nodeLock.unlock();
+        // current->nodeLock.unlock();
     }
 
-    if(newNode->value < parent->value)
+    if(parent == nullptr)
+    {
+        rootNode = newNode;
+    }
+    else if(newNode->value < parent->value)
     {
         parent->left = newNode;
     }
@@ -75,6 +80,8 @@ Node* Map::insertNode(Node* rootNode, Node* newNode)
     {
         parent->right = newNode;
     }
+
+    newNode->parent = parent;
 
     // Unlock node
     // newNode->nodeLock.unlock();
@@ -236,9 +243,8 @@ void Map::deleteFix(Node*& rootNode, Node*& node)
         }
     }
 
-    if((rootNode != nullptr) && (node != nullptr))
+    if(node != nullptr)
     {
-        node->parent = nullptr;
         node->color = black;
     }
 }
@@ -486,7 +492,6 @@ Node* Map::findValue(int valueToFind, Node* rootNode)
 }
 
 
-
 int Map::getNumNodes(const Node* rootNode)
 {
     // RB Tree is empty
@@ -562,8 +567,8 @@ void Map::remove(int value)
 
 int Map::size(void)
 {
-    return getNumNodes(root);
-    // return counter;
+    // return getNumNodes(root);
+    return counter;
 }
 
 
@@ -571,4 +576,5 @@ void Map::clear(void)
 {
     destroyTree(root);
     root = nullptr;
+    counter = 0;
 }
