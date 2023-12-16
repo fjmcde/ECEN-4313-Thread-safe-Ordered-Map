@@ -20,7 +20,7 @@ class Map
 
         /* Tree: core functions */
         void deleteNode(Node* nodeToDelete);
-        Node* insertNode(Node* rootNode, Node* newNode);
+        Node* insertNode(Node*& rootNode, Node* newNode);
         void rebalanceTree(Node*& rootNode, Node*& newNode);
 
         /* Helper functions */

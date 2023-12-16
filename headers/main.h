@@ -30,7 +30,9 @@ namespace testing
     template<typename TF>
     void fork(TF threadFunc);
     void print2DMap(void);
+    void threadInsert(int threadID);
     void threadRange(int threadID);
+    void threadRemove(int threadID);
 }
 
 
@@ -141,6 +143,16 @@ namespace testing
         lk.unlock();
     }
 
+
+    void threadInsert(int threadID)
+    {
+
+    }
+
+    void threadRemove(int threadID)
+    {
+
+    }
 
     void print2DMap(void)
     {

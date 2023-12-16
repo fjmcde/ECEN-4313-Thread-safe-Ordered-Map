@@ -86,21 +86,20 @@ void Map::deleteNode(Node* nodeToDelete)
 }
 
 
-Node* Map::insertNode(Node* rootNode, Node* newNode)
+Node* Map::insertNode(Node*& rootNode, Node* newNode)
 {
     if(rootNode == nullptr)
     {
         return newNode;
     }
 
+    rootNode->nodeLock.lock();
+
     Node* current = rootNode;
     Node* parent = nullptr;
 
     while(current != nullptr)
     {
-        // Lock the current node
-        // current->nodeLock.lock();
-
         parent = current;
 
         if(newNode->value < current->value)
@@ -116,13 +115,12 @@ Node* Map::insertNode(Node* rootNode, Node* newNode)
             // Duplicate values aren't handled yet
 
             // unlock before returning to prevent deadlock
-            // current->nodeLock.unlock();
+            rootNode->nodeLock.unlock();
             return rootNode;
         }
-
-        // Unlock for hand-over-hand locking
-        // current->nodeLock.unlock();
     }
+
+    newNode->nodeLock.lock();
 
     if(parent == nullptr)
     {
@@ -138,9 +136,8 @@ Node* Map::insertNode(Node* rootNode, Node* newNode)
     }
 
     newNode->parent = parent;
-
-    // Unlock node
-    // newNode->nodeLock.unlock();
+    newNode->nodeLock.unlock();
+    rootNode->nodeLock.unlock();
 
     return rootNode;
 }
@@ -375,13 +372,18 @@ void Map::transplantNode(Node* nodeToReplace, Node* transplantNode)
 
 void Map::adjustKeys(Node* rootNode, int& currentKey)
 {
-    if(rootNode != nullptr)
+    if (rootNode != nullptr)
     {
+        rootNode->nodeLock.lock();
+
         adjustKeys(rootNode->left, currentKey);
         rootNode->key = currentKey++;
-        adjustKeys(rootNode->right, currentKey); 
+        adjustKeys(rootNode->right, currentKey);
+
+        rootNode->nodeLock.unlock();
     }
 }
+
 
 
 void Map::leftRotate(Node*& rootNode, Node*& pivotNode)
@@ -541,6 +543,7 @@ void Map::put(int value)
     int currentKey = 0;
     adjustKeys(root, currentKey);
 }
+
 
 
 void Map::remove(int value)
