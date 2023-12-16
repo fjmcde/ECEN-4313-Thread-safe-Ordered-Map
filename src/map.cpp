@@ -469,33 +469,15 @@ Node* Map::findNode(int keyToFind, Node* rootNode)
 }
 
 
-int Map::getNumNodes(const Node* rootNode)
-{
-    // RB Tree is empty
-    if(rootNode == nullptr)
-    {
-        return 0;
-    }
-
-    // Calculate the number of nodes in each path
-    // NOTE: This would be a prime candidate for concurrency;
-    //       One thread per path using fork/join parallelism.
-    int leftSize = getNumNodes(rootNode->left);
-    int rightSize = getNumNodes(rootNode->right);
-
-    // Return total number of nodes (plus 1 for the root node)
-    return leftSize + rightSize + 1;
-}
-
-
 void Map::getRangeHelper(Node* rootNode, int start, int end, Range& result)
 {
-    if (rootNode == nullptr) {
+    if(rootNode == nullptr)
+    {
         return;
     }
 
-    // In-order traversal
-    getRangeHelper(rootNode->left, start, end, result);
+    // Lock the current rootNode of the subtree
+    rootNode->nodeLock.lock();
 
     // Check if the current node's key is within the specified range
     if((rootNode->value >= start) && (rootNode->value <= end))
@@ -503,6 +485,13 @@ void Map::getRangeHelper(Node* rootNode, int start, int end, Range& result)
         result.push_back(std::make_pair(rootNode->key, rootNode->value));
     }
 
+    // Unlock the current rootNode of the subtree
+    // We do this prior to in-order traversal to
+    // achieve hand-over-hand locking
+    rootNode->nodeLock.unlock();
+
+    // In-order traversal
+    getRangeHelper(rootNode->left, start, end, result);
     getRangeHelper(rootNode->right, start, end, result);
 }
 
@@ -539,6 +528,8 @@ void Map::clear(void)
     destroyTree(root);
     root = nullptr;
     counter = 0;
+
+    DEBUG_PRINT("Map Cleared!\nMap.size(): %d\n", this->size());
 }
 
 
@@ -580,10 +571,25 @@ int& Map::at(const int index)
 }
 
 
+/// @brief Retrieves all values within the given integer range (inclusive)
+/// @param start    Starting value
+/// @param end      Ending value
+/// @return         Vector of [unsorted] key/value pairs where key is result.first
+///                 and value is result.second
 Range Map::getRange(int start, int end)
 {
     Range result;
+
+    // Return null it tree is empty
+    if(root == nullptr)
+    {
+        return result;
+    }
+
     getRangeHelper(root, start, end, result);
+
+    std::sort(result.begin(), result.end());
+
     return result;
 }
 

@@ -1,8 +1,8 @@
 #include "../headers/main.h"
 
+
 int main(void)
 {
-    Map map;
     map.put(40);
     map.put(5);
     map.put(2);
@@ -23,26 +23,15 @@ int main(void)
     map.put(0);
     map.put(20);
 
-    Range pairs = map.getRange(2, 9);
+    testing::print2DMap();
 
-    std::cout << "\n\nmap.size(): " << map.size() << std::endl;
+    testing::fork(testing::threadRange);
+    testing::threadRange(MAIN_THREAD);
+    myThread::join();
+    myThread::cleanup();
 
-    std::cout << "Ordered: [";
-    for(int i = 0; i < map.size(); i++)
-    {
-        std::cout << " " << map[i] << " ";
-    }
-    std::cout << "]\n";
-
-    std::cout << "Pairs {k / v}: [";
-    for(size_t i = 0; i < pairs.size(); i++)
-    {
-        std::cout << " {" << pairs[i].first << " / " << pairs[i].second << "} ";
-    }
-    std::cout << "]\n";
-
+    workers.clear();
     map.clear();
-    std::cout << "\nClearing Map:\nmap.size(): " << map.size() << std::endl;
 
     return 0;
 }
