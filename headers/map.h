@@ -17,40 +17,50 @@ class Map
         Node* root;
         int counter;
 
-        /* Tree: Node functions */
-        Node* insertNode(Node* rootNode, Node* newNode);
+        /* Tree: core functions */
         void deleteNode(Node* nodeToDelete);
-        void transplantNode(Node* nodeToReplace, Node* transplantNode);
-        void deleteFix(Node*& rootNode, Node*& node);
-        bool isLeaf(const Node* node);
-        Node* minimum(Node* node);
-        void adjustKeys(Node* rootNode, int& currentKey);
-
-
-        /* Tree: balancing functions */
+        Node* insertNode(Node* rootNode, Node* newNode);
         void rebalanceTree(Node*& rootNode, Node*& newNode);
-        void rightRotate(Node*& rootNode, Node*& pivotNode);
-        void leftRotate(Node*& rootNode, Node*& pivotNode);
 
-        /* Tree: helper functions */
-        Node* findNode(int keyToFind, Node* rootNode);
+        /* Helper functions */
+
+        /* Tree: deleteNode helpers */
+        void deleteFix(Node*& rootNode, Node*& node);
         Node* findValue(int valueToFind, Node* rootNode);
+        bool isLeaf(const Node* node);
+        void transplantNode(Node* nodeToReplace, Node* transplantNode);
+        
+
+        /* Tree: rebalanceTree helpers */
+        void adjustKeys(Node* rootNode, int& currentKey);
+        void leftRotate(Node*& rootNode, Node*& pivotNode);
+        void rightRotate(Node*& rootNode, Node*& pivotNode);
+
+        /* Tree: API helper functions */
+        Node* findNode(int keyToFind, Node* rootNode);
         int getNumNodes(const Node* rootNode);
         void getRangeHelper(Node* rootNode, int start, int end, Range& result);
+        Node* minimum(Node* node);
+
+        /* Tree: Destructor helper */
         void destroyTree(Node* node);
 
     public:
+        /* Constructors & Destructors */
         Map();
         ~Map();
 
         /* API Functions */
+        /* Modifiers */
+        void clear(void);
         void put(int value);
         void remove(int value);
+
+        /* Accessors */
         int& at(const int index);
         Range getRange(int start, int end);
         int size(void);
-        void clear(void);
-
+        
         /* Operator overloading */
         int& operator[](const int index);
 };
