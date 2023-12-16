@@ -590,7 +590,6 @@ Range Map::getRange(int start, int end)
 
 int Map::size(void)
 {
-    // return getNumNodes(root);
     return counter;
 }
 

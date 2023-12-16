@@ -38,7 +38,6 @@ class Map
 
         /* Tree: API helper functions */
         Node* findNode(int keyToFind, Node* rootNode);
-        int getNumNodes(const Node* rootNode);
         void getRangeHelper(Node* rootNode, int start, int end, Range& result);
         Node* minimum(Node* node);
 
