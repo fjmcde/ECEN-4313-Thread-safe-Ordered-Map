@@ -2,8 +2,11 @@
 
 #include "map.h"
 #include <barrier>
+#include <cstdio>
 #include <mutex>
+#include <string>
 #include <thread>
+#include <typeinfo>
 #include <vector>
 
 
@@ -104,6 +107,8 @@ namespace testing
 
     void threadRange(int threadID)
     {
+        bar->arrive_and_wait();
+
         Range pairs;
         int start;
         int end;
@@ -124,7 +129,7 @@ namespace testing
         {
             // Neither values exist in the map
             start = -5;
-            end = 11;
+            end = 2101;
         }
 
         pairs = map.getRange(start, end);
@@ -141,22 +146,101 @@ namespace testing
         printf("]\n\n");
 
         lk.unlock();
+
+        bar->arrive_and_wait();
     }
 
 
     void threadInsert(int threadID)
     {
+        bar->arrive_and_wait();
 
+        if(threadID == MAIN_THREAD)
+        {
+            // Start timeing
+        }
+
+        bar->arrive_and_wait();
+
+
+        if(threadID == MAIN_THREAD)
+        {
+            DEBUG_PRINT("Thread%d: ", threadID);
+            map.put(40);
+            DEBUG_PRINT("Thread%d: ", threadID);
+            map.put(5);
+            DEBUG_PRINT("Thread%d: ", threadID);
+            map.put(2);
+            DEBUG_PRINT("Thread%d: ", threadID);
+            map.put(-1);
+            DEBUG_PRINT("Thread%d: ", threadID);
+            map.put(6);
+        }
+        else if(threadID == 1)
+        {
+            DEBUG_PRINT("Thread%d: ", threadID);
+            map.put(4);
+            DEBUG_PRINT("Thread%d: ", threadID);
+            map.put(200);
+            DEBUG_PRINT("Thread%d: ", threadID);
+            map.put(8);
+            DEBUG_PRINT("Thread%d: ", threadID);
+            map.put(1);
+        }
+        else
+        {
+            DEBUG_PRINT("Thread%d: ", threadID);
+            map.put(73);
+            DEBUG_PRINT("Thread%d: ", threadID);
+            map.put(3);
+            DEBUG_PRINT("Thread%d: ", threadID);
+            map.put(7);
+            DEBUG_PRINT("Thread%d: ", threadID);
+            map.put(9);
+            DEBUG_PRINT("Thread%d: ", threadID);
+            map.put(0);
+            DEBUG_PRINT("Thread%d: ", threadID);
+            map.put(20);
+        }
+
+        bar->arrive_and_wait();
+
+        if(threadID == MAIN_THREAD)
+        {
+            // Stop timer
+        }
     }
 
     void threadRemove(int threadID)
     {
+        bar->arrive_and_wait();
 
+        if(threadID == MAIN_THREAD)
+        {
+            map.remove(20);
+            map.remove(2);
+            map.remove(7);
+        }
+        else if(threadID == 1)
+        {
+            map.remove(40);
+            map.remove(9);
+            map.remove(200);
+            map.remove(6);
+        }
+        else
+        {
+            map.remove(73);
+            map.remove(1);
+            map.remove(-1);
+        }
+
+        bar->arrive_and_wait();
     }
 
     void print2DMap(void)
     {
-        std::cout << "\n\nmap.size(): " << map.size() << std::endl;
+        std::cout << "\nmap.size(): " << map.size() << std::endl;
 
         std::cout << "Ordered: [";
         for(int i = 0; i < map.size(); i++)
@@ -166,12 +250,3 @@ namespace testing
         std::cout << "]\n";
     }
 }
-
-
-
-// std::cout << "Pairs {k / v}: [";
-// for(size_t i = 0; i < pairs.size(); i++)
-// {
-//     std::cout << " {" << pairs[i].first << " / " << pairs[i].second << "} ";
-// }
-// std::cout << "]\n";

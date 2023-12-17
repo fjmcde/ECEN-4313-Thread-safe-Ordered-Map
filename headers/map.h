@@ -2,6 +2,7 @@
 #define MAP_H
 
 #include <algorithm>
+#include <atomic>
 #include <stdexcept>
 #include <utility>
 #include <vector>

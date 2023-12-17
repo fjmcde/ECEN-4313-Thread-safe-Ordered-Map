@@ -25,7 +25,14 @@ void Map::deleteNode(Node* nodeToDelete)
     {
         return;
     }
+    
+    if(nodeToDelete->parent !=nullptr)
+    {
+        nodeToDelete->parent->nodeLock.lock();
+    }
 
+    nodeToDelete->nodeLock.lock();
+    
     Node* successor = nullptr;
     Node* actualReplacementNode = nullptr;
     Node* replacementNode = nodeToDelete;
@@ -39,15 +46,25 @@ void Map::deleteNode(Node* nodeToDelete)
     // Case 2: Node has at most one child
     else if(nodeToDelete->left == nullptr)
     {
+        nodeToDelete->right->nodeLock.lock();
         successor = nodeToDelete->right;
     }
     else if(nodeToDelete->right == nullptr)
     {
+        nodeToDelete->left->nodeLock.lock();
         successor = nodeToDelete->left;
     }
     // Case 3: Node has both children
     else
     {
+        nodeToDelete->left->nodeLock.lock();
+        nodeToDelete->right->nodeLock.lock();
+
+        // Traverse the right subtree of the node we want to delete, to find
+        // the smallest value in that subtree. That smallest value will be the
+        // node which replaces the node we want to delete. The minimum value in
+        // the right subtree is greater than the node to delete, but smaller
+        // than the right subtree root.
         successor = minimum(nodeToDelete->right);
         replacementColor = successor->color;
         actualReplacementNode = successor->right;
@@ -68,17 +85,25 @@ void Map::deleteNode(Node* nodeToDelete)
 
     transplantNode(nodeToDelete, successor);
 
-
-    if(successor != nullptr)
-    {
-        counter--;
-    }
-
     if(replacementColor == black)
     {
         deleteFix(successor, actualReplacementNode);
     }
 
+    if(nodeToDelete->parent !=nullptr)
+    {
+        nodeToDelete->parent->nodeLock.unlock();
+    }
+    if(nodeToDelete->left != nullptr)
+    {
+        nodeToDelete->left->nodeLock.unlock();
+    }
+    if(nodeToDelete->right != nullptr)
+    {
+        nodeToDelete->right->nodeLock.unlock();
+    }
+
+    nodeToDelete->nodeLock.unlock();
     delete nodeToDelete;
 
     int currentKey = 0;
@@ -233,7 +258,7 @@ void Map::deleteFix(Node*& rootNode, Node*& node)
             siblingNode = node->parent->right;
 
             // Case 1: sibling is red
-            if(siblingNode->color == red)
+            if((siblingNode != nullptr) && (siblingNode->color == red))
             {
                 siblingNode->color = black;
                 node->parent->color = red;
@@ -242,15 +267,20 @@ void Map::deleteFix(Node*& rootNode, Node*& node)
             }
 
             // Case 2: sibling's children are black
-            if((siblingNode->left->color == black) && (siblingNode->right->color == black))
+            if(((siblingNode == nullptr) ||
+               (siblingNode->left == nullptr) || (siblingNode->left->color == black)) &&
+               ((siblingNode->right == nullptr) || (siblingNode->right->color == black)))
             {
-                siblingNode->color = red;
-                node = node->parent;
+                if(siblingNode != nullptr)
+                {
+                    siblingNode->color = red;
+                    node = node->parent;
+                }
             }
             else
             {
                 // Case 3: Left child is red; right child is black
-                if(siblingNode->right->color == black)
+                if((siblingNode->right == nullptr) || (siblingNode->right->color == black))
                 {
                     siblingNode->left->color = black;
                     siblingNode->color = red;
@@ -270,9 +300,9 @@ void Map::deleteFix(Node*& rootNode, Node*& node)
         else
         {
             siblingNode = node->parent->left;
-            
+
             // Case 1: sibling is red
-            if(siblingNode->color == red)
+            if((siblingNode != nullptr) && (siblingNode->color == red))
             {
                 siblingNode->color = black;
                 node->parent->color = red;
@@ -281,15 +311,20 @@ void Map::deleteFix(Node*& rootNode, Node*& node)
             }
 
             // Case 2: sibling's children are black
-            if((siblingNode->right->color == black) && (siblingNode->left->color == black))
+            if(((siblingNode == nullptr) ||
+               ((siblingNode->right == nullptr) || (siblingNode->right->color == black))) &&
+               (((siblingNode->left == nullptr) || (siblingNode->left->color == black))))
             {
-                siblingNode->color = red;
-                node = node->parent;
+                if(siblingNode != nullptr)
+                {
+                    siblingNode->color = red;
+                    node = node->parent;
+                }
             }
             else
             {
                 // Case 3: right child is red; left child is black
-                if(siblingNode->left->color == black)
+                if((siblingNode->left == nullptr) || (siblingNode->left->color == black))
                 {
                     siblingNode->right->color = black;
                     siblingNode->color = red;
@@ -314,9 +349,10 @@ void Map::deleteFix(Node*& rootNode, Node*& node)
 }
 
 
+
 Node* Map::findValue(int valueToFind, Node* rootNode)
 {
-    if(rootNode == nullptr || valueToFind == rootNode->value)
+    if((rootNode == nullptr) || (valueToFind == rootNode->value))
     {
         return rootNode;
     }
@@ -372,15 +408,11 @@ void Map::transplantNode(Node* nodeToReplace, Node* transplantNode)
 
 void Map::adjustKeys(Node* rootNode, int& currentKey)
 {
-    if (rootNode != nullptr)
+    if(rootNode != nullptr)
     {
-        rootNode->nodeLock.lock();
-
         adjustKeys(rootNode->left, currentKey);
         rootNode->key = currentKey++;
         adjustKeys(rootNode->right, currentKey);
-
-        rootNode->nodeLock.unlock();
     }
 }
 
@@ -424,6 +456,7 @@ void Map::leftRotate(Node*& rootNode, Node*& pivotNode)
 
 void Map::rightRotate(Node*& rootNode, Node*& pivotNode)
 {
+    // pivotNode->nodeLock.lock();
     Node* leftChild = pivotNode->left;
  
     pivotNode->left = leftChild->right;
@@ -454,7 +487,7 @@ void Map::rightRotate(Node*& rootNode, Node*& pivotNode)
 Node* Map::findNode(int keyToFind, Node* rootNode)
 {
     // Check the root node
-    if(rootNode == nullptr || keyToFind == rootNode->key)
+    if((rootNode == nullptr) || (keyToFind == rootNode->key))
     {
         return rootNode;
     }
@@ -537,6 +570,7 @@ void Map::clear(void)
 
 void Map::put(int value)
 {
+    DEBUG_PRINT("Map::%s(%d)\n", __FUNCTION__, value);
     Node* newNode = new Node(++counter, value);
     root = insertNode(root, newNode);
 
@@ -548,6 +582,7 @@ void Map::put(int value)
 
 void Map::remove(int value)
 {
+    DEBUG_PRINT("Map::%s(%d)\n", __FUNCTION__, value);
     Node* nodeToDelete = findValue(value, root);
 
     if(nodeToDelete != nullptr)
@@ -570,7 +605,6 @@ int& Map::at(const int index)
     {
         throw std::out_of_range("Map::get(): Value not found");
     }
-    
 }
 
 
