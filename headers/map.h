@@ -3,6 +3,8 @@
 
 #include <algorithm>
 #include <atomic>
+#include <iostream>
+#include <stack>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -10,6 +12,7 @@
 #include "global.h"
 #include "node.h"
 
+#define SEQCST      std::memory_order_seq_cst
 
 typedef std::vector<std::pair<int, int>> Range;
 
@@ -17,7 +20,7 @@ class Map
 {
     private:
         Node* root;
-        int counter;
+        std::atomic<int> counter;
 
         /* Tree: core functions */
         void deleteNode(Node* nodeToDelete);
@@ -32,9 +35,8 @@ class Map
         bool isLeaf(const Node* node);
         void transplantNode(Node* nodeToReplace, Node* transplantNode);
         
-
         /* Tree: rebalanceTree helpers */
-        void adjustKeys(Node* rootNode, int& currentKey);
+        void adjustKeys(Node* rootNode, std::atomic<int>& currentKey);
         void leftRotate(Node*& rootNode, Node*& pivotNode);
         void rightRotate(Node*& rootNode, Node*& pivotNode);
 
@@ -44,7 +46,10 @@ class Map
         Node* minimum(Node* node);
 
         /* Tree: Destructor helper */
-        void destroyTree(Node* node);
+        void destroyTree(Node*& node);
+
+        /* Concurrency helpers */
+        int fai(std::atomic<int>& x, int amount, std::memory_order MEM);
 
     public:
         /* Constructors & Destructors */
@@ -58,12 +63,13 @@ class Map
         void remove(int value);
 
         /* Accessors */
-        int& at(const int index);
+        int at(const int index);
         Range getRange(int start, int end);
         int size(void);
+        void printKVPairs(void);
         
         /* Operator overloading */
-        int& operator[](const int index);
+        int operator[](const int index);
 };
 
 #endif /* MAP_H */

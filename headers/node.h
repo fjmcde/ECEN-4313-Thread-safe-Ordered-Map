@@ -21,8 +21,8 @@ struct Node
     // using a single-global lock for the whole tree
     std::mutex nodeLock;
 
-    int key;
-    int value;
+    std::atomic<int> key;
+    std::atomic<int> value;
 
     Node* parent;
     Node* left;

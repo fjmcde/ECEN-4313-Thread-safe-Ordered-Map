@@ -3,15 +3,15 @@
 int main(void)
 {
     /* TEST 1: Sequential puts and removes */
-    printf("TEST 1: Sequential puts and removes");
+    printf("TEST 1: Sequential puts and removes\n");
     map.put(40);
     map.put(5);
     map.put(2);
-    map.put(-1);
     map.put(6);
     map.put(4);
     map.put(200);
     map.put(8);
+    map.put(10);
     map.put(1);
     map.remove(1);
     map.put(73);
@@ -35,7 +35,7 @@ int main(void)
 
     testing::print2DMap();
 
-    /* Test 3: Test concurrent getRange */
+    // /* Test 3: Test concurrent getRange */
     printf("\n\nTEST 3: Test concurrent getRange\n");
     testing::fork(testing::threadRange);
     testing::threadRange(MAIN_THREAD);
@@ -51,13 +51,11 @@ int main(void)
     myThread::join();
     myThread::cleanup();
 
+    map.printKVPairs();
     testing::print2DMap();
     map.clear();
 
-    // Clear worker threads vector
-    workers.clear();
-
-    printf("ALL TESTS COMPLETE!");
+    printf("ALL TESTS COMPLETE!\n\n");
 
     return 0;
 }

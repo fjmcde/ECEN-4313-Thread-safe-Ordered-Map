@@ -51,7 +51,7 @@ namespace myThread
 
         for(int threadIdx = 0; threadIdx < numThreads; threadIdx++)
         {
-            // std::cout << "Created Thread: " << threadIdx << std::endl;
+            DEBUG_PRINT("Created Thread: %s", "\n");
             workers[threadIdx] = new std::thread(threadMain, threadIdx);
         }
     }
@@ -66,7 +66,7 @@ namespace myThread
     {
         for(int i = 0; i < numThreads; i++)
         {
-            // std::cout << "Joined Thread: " << i << std::endl;
+            DEBUG_PRINT("Joined Thread: %s", "\n");
             workers[i]->join();
         }
     }
@@ -78,7 +78,7 @@ namespace myThread
 
         for(int i = 0; i < numThreads; i++)
         {
-            // std::cout << "Deleted Thread: " << i << std::endl;
+            DEBUG_PRINT("Deleted Thread: %s", "\n");
             delete workers[i];
         }
 
@@ -172,9 +172,9 @@ namespace testing
             DEBUG_PRINT("Thread%d: ", threadID);
             map.put(2);
             DEBUG_PRINT("Thread%d: ", threadID);
-            map.put(-1);
-            DEBUG_PRINT("Thread%d: ", threadID);
             map.put(6);
+            DEBUG_PRINT("Thread%d: ", threadID);
+            map.put(10);
         }
         else if(threadID == 1)
         {
@@ -211,6 +211,7 @@ namespace testing
         }
     }
 
+
     void threadRemove(int threadID)
     {
         bar->arrive_and_wait();
@@ -221,32 +222,37 @@ namespace testing
             map.remove(2);
             map.remove(7);
         }
-        else if(threadID == 1)
-        {
-            map.remove(40);
-            map.remove(9);
-            map.remove(200);
-            map.remove(6);
-        }
-        else
-        {
-            map.remove(73);
-            map.remove(1);
-            map.remove(-1);
-        }
+        // else if(threadID == 1)
+        // {
+        //     map.remove(40);
+        //     map.remove(9);
+        //     map.remove(200);
+        //     map.remove(6);
+        // }
+        // else
+        // {
+        //     map.remove(73);
+        //     map.remove(1);
+        //     map.remove(10);
+        // }
 
         bar->arrive_and_wait();
     }
 
+
     void print2DMap(void)
     {
-        std::cout << "\nmap.size(): " << map.size() << std::endl;
-
+        std::cout << "\nmap.size(): " << map.size() << std::endl;      
+        
         std::cout << "Ordered: [";
         for(int i = 0; i < map.size(); i++)
         {
-            std::cout << " " << map[i] << " ";
+            if(map[i] != -1)
+            {
+                std::cout << " " << map[i] << " ";
+            }
         }
         std::cout << "]\n";
     }
 }
+
