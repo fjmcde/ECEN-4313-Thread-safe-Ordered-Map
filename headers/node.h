@@ -12,6 +12,7 @@
     #define DEBUG_NODE(...) do{}while(0)
 #endif
 
+#define SEQCST      std::memory_order_seq_cst
 
 enum RBColor : int { red, black };
 
@@ -32,8 +33,8 @@ struct Node
     Node(int k, int v)
     {
         // Set key/value
-        key = k;
-        value = v;
+        key.store(k, SEQCST);
+        value.store(v);
 
         // Initialize pointers to null
         parent = nullptr;

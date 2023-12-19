@@ -3,7 +3,7 @@
 Map::Map()
 {
     this->root = nullptr;
-    fai(this->counter, 0 - this->size(), SEQCST);
+    this->counter.store(0, SEQCST);
 }
 
 
@@ -22,28 +22,28 @@ Map::~Map()
 
 void Map::deleteNode(Node* nodeToDelete)
 {
-    if(nodeToDelete == nullptr)
+    if (nodeToDelete == nullptr)
     {
         return;
     }
 
     nodeToDelete->nodeLock.lock();
-    
+
     Node* successor = nullptr;
     Node* actualReplacementNode = nullptr;
 
     // Case 1: Node has no children
-    if(isLeaf(nodeToDelete))
+    if (isLeaf(nodeToDelete))
     {
         successor = nullptr;
     }
     // Case 2: Node has at most one child
-    else if(nodeToDelete->left == nullptr)
+    else if (nodeToDelete->left == nullptr)
     {
         nodeToDelete->right->nodeLock.lock();
         successor = nodeToDelete->right;
     }
-    else if(nodeToDelete->right == nullptr)
+    else if (nodeToDelete->right == nullptr)
     {
         nodeToDelete->left->nodeLock.lock();
         successor = nodeToDelete->left;
@@ -62,8 +62,14 @@ void Map::deleteNode(Node* nodeToDelete)
         successor = minimum(nodeToDelete->right);
         actualReplacementNode = successor->right;
 
-        if(successor->parent != nodeToDelete)
+        if (successor->parent != nodeToDelete)
         {
+            // Missing update to the parent of actualReplacementNode
+            if (actualReplacementNode != nullptr)
+            {
+                actualReplacementNode->parent = successor; // Add this line
+            }
+
             transplantNode(successor, successor->right);
             successor->right = nodeToDelete->right;
             successor->right->parent = successor;
@@ -78,16 +84,16 @@ void Map::deleteNode(Node* nodeToDelete)
 
     transplantNode(nodeToDelete, successor);
 
-    if(nodeToDelete->color == black)
+    if (nodeToDelete->color == black)
     {
         deleteFix(successor, actualReplacementNode);
     }
 
-    if(nodeToDelete->left != nullptr)
+    if (nodeToDelete->left != nullptr)
     {
         nodeToDelete->left->nodeLock.unlock();
     }
-    if(nodeToDelete->right != nullptr)
+    if (nodeToDelete->right != nullptr)
     {
         nodeToDelete->right->nodeLock.unlock();
     }
@@ -113,11 +119,11 @@ Node* Map::insertNode(Node*& rootNode, Node* newNode)
     {
         parent = current;
 
-        if(newNode->value < fai(current->value, 0, SEQCST))
+        if(newNode->value < current->value.load(SEQCST))
         {
             current = current->left;
         }
-        else if(newNode->value > fai(current->value, 0, SEQCST))
+        else if(newNode->value > current->value.load(SEQCST))
         {
             current = current->right;
         }
@@ -137,7 +143,7 @@ Node* Map::insertNode(Node*& rootNode, Node* newNode)
     {
         rootNode = newNode;
     }
-    else if(newNode->value < parent->value)
+    else if(newNode->value < parent->value.load(SEQCST))
     {
         parent->left = newNode;
     }
@@ -340,9 +346,9 @@ void Map::deleteFix(Node*& rootNode, Node*& node)
 
 Node* Map::findValue(int valueToFind, Node* rootNode)
 {
-    while((rootNode != nullptr) && (valueToFind != fai(rootNode->value, 0, SEQCST)))
+    while((rootNode != nullptr) && (valueToFind != rootNode->value.load(SEQCST)))
     {
-        if(valueToFind < fai(rootNode->value, 0, SEQCST))
+        if(valueToFind < rootNode->value.load(SEQCST))
         {
             rootNode = rootNode->left;
         }
@@ -403,7 +409,7 @@ void Map::adjustKeys(Node* rootNode, std::atomic<int>& currentKey)
     {
         if(current->left == nullptr)
         {
-            current->key = fai(currentKey, 1, SEQCST);
+            current->key.store(fai(currentKey, 1, SEQCST), SEQCST);
             current = current->right;
         }
         else
@@ -422,7 +428,7 @@ void Map::adjustKeys(Node* rootNode, std::atomic<int>& currentKey)
             }
             else
             {
-                current->key = fai(currentKey, 1, SEQCST);
+                current->key.store(fai(currentKey, 1, SEQCST), SEQCST);
                 previous->right = nullptr;
                 current = current->right;
             }
@@ -499,13 +505,13 @@ void Map::rightRotate(Node*& rootNode, Node*& pivotNode)
 Node* Map::findNode(int keyToFind, Node* rootNode)
 {
     // Check the root node
-    if((rootNode == nullptr) || (keyToFind == fai(rootNode->key, 0, SEQCST)))
+    if((rootNode == nullptr) || (keyToFind == rootNode->key.load(SEQCST)))
     {
         return rootNode;
     }
 
     // Determine path to check
-    if(keyToFind < rootNode->key)
+    if(keyToFind < rootNode->key.load(SEQCST))
     {
         return findNode(keyToFind, rootNode->left);
     }
@@ -527,19 +533,17 @@ void Map::getRangeHelper(Node* rootNode, int start, int end, Range& result)
     rootNode->nodeLock.lock();
 
     // Check if the current node's key is within the specified range
-    if((fai(rootNode->value, 0, SEQCST) >= start) && (fai(rootNode->value, 0, SEQCST) <= end))
+    if((rootNode->value.load(SEQCST) >= start) && (rootNode->value.load(SEQCST) <= end))
     {
-        result.push_back(std::make_pair(static_cast<int>(fai(rootNode->key, 0, SEQCST)), static_cast<int>(fai(rootNode->value, 0, SEQCST))));
+        result.push_back(std::make_pair(rootNode->key.load(SEQCST), rootNode->value.load(SEQCST)));
     }
-
-    // Unlock the current rootNode of the subtree
-    // We do this prior to in-order traversal to
-    // achieve hand-over-hand locking
-    rootNode->nodeLock.unlock();
 
     // In-order traversal
     getRangeHelper(rootNode->left, start, end, result);
     getRangeHelper(rootNode->right, start, end, result);
+
+    // Unlock the current rootNode of the subtree
+    rootNode->nodeLock.unlock();
 }
 
 
@@ -607,10 +611,14 @@ void Map::clear(void)
         Node* parent = current->parent;
         if (parent != nullptr)
         {
-            if (parent->left == current)
+            if(parent->left == current)
+            {
                 parent->left = current->right;
+            }
             else
+            {
                 parent->right = current->right;
+            }
         }
         else
         {
@@ -620,9 +628,9 @@ void Map::clear(void)
         delete current;
     }
 
-    this->counter = 0;
+    this->counter.store(0, SEQCST);
 
-    DEBUG_PRINT("COUNTER AFTER CLEAR: %d\n", static_cast<int>(counter));
+    DEBUG_PRINT("COUNTER AFTER CLEAR: %d\n", static_cast<int>(this->counter.load(SEQCST)));
     DEBUG_PRINT("Map Cleared!\nMap.size(): %d\n", this->size());
 }
 
@@ -634,11 +642,9 @@ void Map::put(int value)
     fai(this->counter, 1, SEQCST);
     Node* newNode = new Node(this->counter, value);
     this->root = insertNode(this->root, newNode);
-
-    // std::atomic<int> currentKey = 0;
     
     this->rebalanceTree(root, newNode);
-    DEBUG_PRINT("Inserted value(%d): Counter: %d\n", value, fai(this->counter, 0, SEQCST));
+    DEBUG_PRINT("Inserted value(%d): Counter: %d\n", value, this->counter.load(SEQCST));
 }
 
 
@@ -653,14 +659,14 @@ void Map::remove(int value)
         deleteNode(nodeToDelete);
     }
 
-    fai(counter, -1, SEQCST);
+    fai(this->counter, -1, SEQCST);
 
     this->root->nodeLock.lock();
     std::atomic<int> currentKey = 0;
     adjustKeys(this->root, currentKey);
     this->root->nodeLock.unlock();
 
-    DEBUG_PRINT("Deleted value(%d): Counter: %d\n", value, fai(counter, 0, SEQCST));
+    DEBUG_PRINT("Deleted value(%d): Counter: %d\n", value, this->counter.load(SEQCST));
 }
 
 
@@ -669,12 +675,12 @@ int Map::at(const int index)
     Node* n = findNode(index, this->root);
 
     
-        if (n == nullptr)
-        {
-            return -1;
-        }
+    if (n == nullptr)
+    {
+        return -1;
+    }
 
-        return fai(n->value, 0, SEQCST);
+    return n->value.load(SEQCST);
 }
 
 
@@ -704,7 +710,7 @@ Range Map::getRange(int start, int end)
 
 int Map::size(void)
 {
-    return fai(this->counter, 0, SEQCST);
+    return this->counter.load(SEQCST);
 }
 
 

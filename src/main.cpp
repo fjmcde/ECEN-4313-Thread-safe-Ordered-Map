@@ -53,7 +53,7 @@ int main(void)
 
     map.printKVPairs();
     testing::print2DMap();
-    map.clear();
+    // map.clear();
 
     printf("ALL TESTS COMPLETE!\n\n");
 
